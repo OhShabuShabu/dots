@@ -80,9 +80,18 @@ allow_libvirt(){
     echo -e "${YELLOW}[→] ufw is installed. applying firewall rules${RESET}"
     sudo ufw allow in on virbr0
     sudo ufw allow out on virbr0
-
     config_options "/etc/ufw/sysctl.conf" "net.ipv4.ip_forward=1" 8
   fi
+}
+
+download_ios(){
+  echo -e "${GREEN}[✓] Downloading Windows 10 ISO...${RESET}"
+  curl https://trashbytes.net/dl/4PTqqKt6mJB_wXE4cTujQS9rjIVQ3gFgH2fn9KJ8Nv7peYgPOL2wCgvB4-RFWQvBaWh113lFOpiUpHDOmMiEYJ6fqiwX48vbaSxyHQDW_widvtWxUqEvs8sOadPuPa79Q0VzPWVqYvohQQD-tCs6VBz3JZieOJ4HKTKGsbbmvCxPX2-F478osl1t_mvspZ7AXY6q7K7risgS?v=1774125334-E%2B%2BwUgVTiRw3aDfQghebvB9oTV52Wi7V%2Bcx%2FjATF%2FIo%3D -o /home/$USER/Downloads/win10.iso
+  echo -e "${GREEN}[✓] Finished Download for Windows 10 ISO in /home/$USER/Downloads.${RESET}"
+
+  echo -e "${GREEN}[✓] Downloading Virtio Guest-Agent ISO...${RESET}"
+  curl https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win-0.1.285.iso -o /home/$USER/Downloads/virtio-win.iso
+  echo -e "${GREEN}[✓] Finished Download for Virtio Guest-Agent ISO in /home/$USER/Downloads.${RESET}"
 }
 
 # ---- RUN EVERYTHING ----
@@ -91,5 +100,20 @@ install_required
 allow_libvirt
 enable_autostart
 setting_users
+
+read -p "Do you want to Download Windows 10 ISO? (y/n): " confirm
+
+# Check the input
+case "$confirm" in
+    [yY][eE][sS]|[yY])
+        download_ios
+        ;;
+    [nN][oO]|[nN])
+        echo "Operation cancelled."
+        ;;
+    *)
+        echo "Invalid input. Please enter y or n."
+        ;;
+esac
 
 echo -e "${GREEN}Done. You may need to log out and back in for group changes.${RESET}"
