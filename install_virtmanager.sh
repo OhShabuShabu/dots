@@ -31,14 +31,14 @@ make_yay() {
 
 install_required() {
   packages=(
-    qemu-full 
+    qemu-full
+    qemu-emulators-full
     virt-manager
     virt-viewer
     dnsmasq
     vde2
     bridge-utils
     openbsd-netcat 
-    dmidecode
     libvirt
   )
 
@@ -52,9 +52,12 @@ install_required() {
   done
 }
 
-enable_service() {
+enable_autostart() {
   echo -e "${YELLOW}[→] Enabling libvirtd service...${RESET}"
   sudo systemctl enable --now libvirtd
+  echo -e "${YELLOW}[→] Enabling virtual network...${RESET}"
+  sudo virsh net-start default || true
+  sudo virsh net-autostart default
 }
 
 setting_users() {
@@ -72,10 +75,19 @@ setting_users() {
   done
 }
 
+allow_libvirt(){
+  if pacman -Qi firewalld &> /dev/null; then
+    echo -e "${YELLOW}[→] firewalld is installed.${RESET}"
+    sudo firewall-cmd --permanent --new-zone=libvirt || true
+    sudo firewall-cmd --reload
+  fi
+}
+
 # ---- RUN EVERYTHING ----
 check_yay
 install_required
-enable_service
+allow_libvirt
+enable_autostart
 setting_users
 
 echo -e "${GREEN}Done. You may need to log out and back in for group changes.${RESET}"
