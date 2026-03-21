@@ -18,30 +18,16 @@ check_yay() {
 
 make_yay() {
   sudo pacman -S --needed --noconfirm base-devel git
-
   tmpdir=$(mktemp -d)
   git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-
   pushd "$tmpdir/yay" > /dev/null
   makepkg -si --noconfirm
   popd > /dev/null
-
   rm -rf "$tmpdir"
 }
 
 install_required() {
-  packages=(
-    qemu-full
-    qemu-emulators-full
-    virt-manager
-    virt-viewer
-    dnsmasq
-    vde2
-    bridge-utils
-    openbsd-netcat 
-    libvirt
-  )
-
+  packages=(qemu-full qemu-emulators-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt)
   for pkg in "${packages[@]}"; do
     if pacman -Qi "$pkg" &> /dev/null; then
       echo -e "${GREEN}[✓] $pkg is already installed${RESET}"
@@ -61,18 +47,28 @@ enable_autostart() {
 }
 
 setting_users() {
-  groups=(
-    libvirt
-    libvirt-qemu
-    kvm
-    input
-    disk
-  )
-
+  groups=(libvirt libvirt-qemu kvm input disk)
   for grp in "${groups[@]}"; do
     sudo usermod -aG "$grp" "$USER"
     echo -e "${GREEN}[✓] $USER added to $grp${RESET}"
   done
+}
+
+# --- FIXED FUNCTION DEFINITION ---
+config_options() {
+  local FILE=$1
+  local SETTING=$2
+  local LINE=$3
+
+  if grep -Fxq "$SETTING" "$FILE"; then
+      echo -e "${GREEN}[✓] $SETTING is already configured in $FILE. Skipping.${RESET}"
+  else
+      echo -e "${YELLOW}[→] Creating File Backup for $FILE...${RESET}"
+      sudo cp "$FILE" "$FILE.bak"
+      echo -e "${GREEN}[✓] Applying configuration: Setting line $LINE to $SETTING...${RESET}"
+      # Use curly braces to separate variable name from the 'c' command
+      sudo sed -i "${LINE}c\\$SETTING" "$FILE"
+  fi
 }
 
 allow_libvirt(){
@@ -80,6 +76,15 @@ allow_libvirt(){
     echo -e "${YELLOW}[→] firewalld is installed.${RESET}"
     sudo firewall-cmd --permanent --new-zone=libvirt || true
     sudo firewall-cmd --reload
+  fi
+
+  if pacman -Qi ufw &> /dev/null; then
+    echo -e "${YELLOW}[→] ufw is installed. applying firewall rules${RESET}"
+    sudo ufw allow in on virbr0
+    sudo ufw allow out on virbr0
+
+    # --- FIXED FUNCTION CALL ---
+    config_options "/etc/ufw/sysctl.conf" "net.ipv4.ip_forward=1" 8
   fi
 }
 
