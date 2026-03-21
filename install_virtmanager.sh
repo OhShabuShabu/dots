@@ -54,7 +54,6 @@ setting_users() {
   done
 }
 
-# --- FIXED FUNCTION DEFINITION ---
 config_options() {
   local FILE=$1
   local SETTING=$2
