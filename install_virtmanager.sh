@@ -101,7 +101,7 @@ allow_libvirt
 enable_autostart
 setting_users
 
-read -p "Do you want to Download Windows 10 ISO? (y/n): " confirm
+read -p "Do you want to Download Windows 10 ISO? (y/n): " confirm </dev/tty
 
 # Check the input
 case "$confirm" in
