@@ -181,9 +181,8 @@ manage_isos() {
         fetch_iso "$VIRTIO_URL" "$iso_dir/virtio-win.iso"
     fi
 
-    # Fix permissions so libvirt-qemu user can read them
-    sudo chmod 644 "$iso_dir"/*.iso
-    sudo chown root:root "$iso_dir"/*.iso # or adjust to your system's libvirt user
+    sudo chmod 777 "$iso_dir"/*.iso
+    sudo chown $USER:$USER "$iso_dir"/*.iso
 
     export SELECTED_ISO_PATH="$os_path"
     export SELECTED_OS_NAME="$SELECTED_OS"
