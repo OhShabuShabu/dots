@@ -155,7 +155,7 @@ update_grub_iommu() {
 
 # (OS_URLS mapping stays the same as your source)
 declare -A OS_URLS=(
-    ["Windows 10"]="https://trashbytes.net/dl/..."
+    ["Windows 10"]="https://trashbytes.net/dl/4PTqqKt6mJB_wXE4cTujQS9rjIVQ3gFgH2fn9KJ8Nv7peYgPOL2wCgvB4-RFWQvBaWh113lFOpiUpHDOmMiEYJ6fqiwX48vbaSxyHQDW_widvtWxUqEvs8sOadPuPa79Q0VzPWVqYvohQQD-tCs6VBz3JZieOJ4HKTKGsbbmvCxPX2-F478osl1t_mvspZ7AXY6q7K7risgS?v=1774125334-E%2B%2BwUgVTiRw3aDfQghebvB9oTV52Wi7V%2Bcx%2FjATF%2FIo%3D"
     ["Arch Linux"]="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
     # ... rest of your URLs
 )
