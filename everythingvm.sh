@@ -229,9 +229,9 @@ if ! curl -fsSL "$TUI_URL" -o /tmp/tui-engine.sh; then
 fi
 source /tmp/tui-engine.sh
 
-init_sudo
-#check_yay
-#install_required
+#init_sudo
+check_yay
+install_required
 enable_services
 setup_firewall
 update_grub_iommu
