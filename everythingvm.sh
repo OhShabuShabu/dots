@@ -66,19 +66,42 @@ check_yay() {
 }
 
 install_required() {
+    local status=0
+
     case "$DISTRO" in
     "arch")
         local pkgs=(qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt swtpm ovmf ebtables iptables-nft wget)
-        gum spin --spinner line --title "Installing virt stack..." -- yay -S --needed --noconfirm "${pkgs[@]}" >/dev/null 2>&1
+        gum spin --spinner line --title "Installing virt stack (Arch)..." -- \
+            yay -S --needed --noconfirm "${pkgs[@]}" >/dev/null 2>&1
+        status=$?
         ;;
     "fedora")
-        gum spin --spinner line --title "Installing virt stack..." -- sudo dnf install -y @virtualization wget >/dev/null 2>&1
+        gum spin --spinner line --title "Installing virt stack (Fedora)..." -- \
+            sudo dnf install -y @virtualization wget >/dev/null 2>&1
+        status=$?
         ;;
     "debian")
         local pkgs=(qemu-system-x86 libvirt-daemon-system libvirt-clients virt-manager bridge-utils ovmf swtpm wget)
-        gum spin --spinner line --title "Installing virt stack..." -- bash -c "sudo apt update >/dev/null 2>&1 && sudo apt install -y ${pkgs[*]} >/dev/null 2>&1"
+        # We split apt update and install for better error tracking
+        gum spin --spinner line --title "Updating package lists..." -- sudo apt update >/dev/null 2>&1
+
+        gum spin --spinner line --title "Installing virt stack (Debian)..." -- \
+            sudo apt install -y "${pkgs[@]}" >/dev/null 2>&1
+        status=$?
+        ;;
+    *)
+        gum format "> [!] **Error**: Unsupported distribution: $DISTRO"
+        return 1
         ;;
     esac
+
+    # Final Verification
+    if [ $status -eq 0 ]; then
+        gum style --foreground 212 "✔ Virtualization stack installed successfully!"
+    else
+        gum style --foreground 196 "✖ Installation failed. Please check your internet connection or package manager."
+        return 1
+    fi
 }
 
 enable_services() {
