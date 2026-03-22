@@ -138,13 +138,22 @@ manage_isos() {
 
     if [[ ! -f "$os_path" ]]; then
         info "Downloading $SELECTED_OS..."
-        wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
+        if [[ "$SELECTED_OS" == *"fedora"* ]]; then
+            wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
+        else
+            wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
+        fi
     fi
 
     if [[ "$SELECTED_OS" == *"Windows"* ]]; then
         if [[ ! -f "$iso_dir/virtio-win.iso" ]]; then
             info "Downloading VirtIO drivers for Windows..."
-            wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
+
+            if [[ "$SELECTED_OS" == *"fedora"* ]]; then
+                wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
+            else
+                wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
+            fi
         fi
     fi
 
@@ -163,6 +172,7 @@ deploy_vm_from_xml() {
     info "Fetching VM preset..."
     curl -fsSL https://raw.githubusercontent.com/OhShabuShabu/dots/refs/heads/main/vmpreset.xml -o "$xml_file"
 
+    sed -i "s/machine='[^']*'/machine='q35'/g" "$xml_file"
     sed -i "s,<name>win10</name>,<name>$vm_name</name>,g" "$xml_file"
     sed -i "s,/var/lib/libvirt/images/win10.qcow2,$disk_path,g" "$xml_file"
     sed -i "s,/home/user/Documents/Iso/win10.iso,$SELECTED_ISO_PATH,g" "$xml_file"
