@@ -200,10 +200,17 @@ if ! curl -fsSL "$TUI_URL" -o /tmp/tui-engine.sh; then exit 1; fi
 source /tmp/tui-engine.sh
 
 init_sudo
+log "DONE. init sudo"
 check_yay
+log "DONE. check yay"
 install_required
+log "DONE. install_required"
 enable_services
+
+log "DONE. enable_services"
 setup_firewall
+
+log "DONE. setup_firewall"
 update_grub_iommu
 manage_isos
 deploy_vm_from_xml
