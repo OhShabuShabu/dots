@@ -217,11 +217,11 @@ deploy_vm_from_xml() {
         sudo chown libvirt-qemu:kvm "$disk_path" 2>/dev/null || sudo chown qemu:qemu "$disk_path" 2>/dev/null || true
     fi
 
-    if virsh define "$xml_file" >/dev/null; then
+    if virsh -c qemu:///system define "$xml_file" >/dev/null; then
         rm -f "$xml_file"
         log "VM '$vm_name' defined successfully."
         if gum confirm "Start $vm_name now?"; then
-            virsh start "$vm_name" || error_exit "Could not start VM."
+            virsh -c qemu:///system start "$vm_name" || error_exit "Could not start VM."
             log "VM started."
         fi
     else
