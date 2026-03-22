@@ -2,6 +2,7 @@
 
 # set -e: Exit on error | -u: Exit on unset variables | -o pipefail: Catch errors in pipes
 set -euo pipefail
+set -x
 
 TUI_URL="https://raw.githubusercontent.com/OhShabuShabu/dots/heads/main/atlas/tui-engine.sh"
 
