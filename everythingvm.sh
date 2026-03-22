@@ -18,25 +18,26 @@ detect_distro() {
 DISTRO=$(detect_distro)
 
 install_gum() {
-    if command -v gum &>/dev/null; then return; fi
+    command -v gum &>/dev/null && return
     if [ "$DISTRO" = "arch" ]; then
-        sudo pacman -S --needed --noconfirm gum
+        sudo pacman -S --needed --noconfirm gum >/dev/null
     elif [ "$DISTRO" = "fedora" ]; then
-        sudo dnf install -y gum
+        sudo dnf install -y gum >/dev/null
     elif [ "$DISTRO" = "debian" ]; then
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-        sudo apt update && sudo apt install -y gum
+        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list >/dev/null
+        sudo apt update >/dev/null && sudo apt install -y gum >/dev/null
     fi
 }
 
-log() { gum style --foreground 78 " [✓] $1"; }
-warn() { gum style --foreground 214 " [!] $1"; }
-info() { gum style --foreground 39 " [i] $1"; }
+install_gum
+
+log() { gum style --foreground 78 "[OK] $1"; }
+info() { gum style --foreground 39 "[INFO] $1"; }
 
 init_sudo() {
-    info "Requesting sudo privileges..."
+    info "Requesting sudo..."
     sudo -v
     while true; do
         sudo -n true
@@ -45,114 +46,113 @@ init_sudo() {
     done 2>/dev/null &
 }
 
+# Helper for distro-specific wget flags
+fetch_iso() {
+    local url="$1"
+    local dest="$2"
+    if [ "$DISTRO" = "fedora" ]; then
+        wget -q --progress=bar:force -O "$dest" "$url"
+    else
+        wget -q --show-progress -O "$dest" "$url"
+    fi
+}
+
 check_yay() {
-    if [[ "$DISTRO" == "arch" ]]; then
-        if ! command -v yay &>/dev/null; then
-            info "Arch detected: Installing yay..."
-            sudo pacman -S --needed --noconfirm base-devel git
-            local tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-            pushd "$tmpdir/yay" >/dev/null && makepkg -si --noconfirm && popd >/dev/null
+    if [[ "$DISTRO" == "arch" ]] && ! command -v yay &>/dev/null; then
+        gum spin --spinner line --title "Installing yay..." -- bash -c '
+            sudo pacman -S --needed --noconfirm base-devel git >/dev/null 2>&1
+            tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/yay.git "$tmpdir/yay" >/dev/null 2>&1
+            pushd "$tmpdir/yay" >/dev/null && makepkg -si --noconfirm >/dev/null 2>&1 && popd >/dev/null
             rm -rf "$tmpdir"
-        fi
+        '
     fi
 }
 
 install_required() {
-    info "Installing virtualization stack for $DISTRO..."
     case "$DISTRO" in
     "arch")
-        local packages=(qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt swtpm ovmf ebtables iptables-nft wget)
-        gum spin --spinner dot --title "Installing Arch packages..." -- yay -S --needed --noconfirm "${packages[@]}"
+        local pkgs=(qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt swtpm ovmf ebtables iptables-nft wget)
+        gum spin --spinner line --title "Installing virt stack..." -- yay -S --needed --noconfirm "${pkgs[@]}" >/dev/null 2>&1
         ;;
     "fedora")
-        gum spin --spinner dot --title "Installing Fedora packages..." -- sudo dnf install -y @virtualization wget
+        gum spin --spinner line --title "Installing virt stack..." -- sudo dnf install -y @virtualization wget >/dev/null 2>&1
         ;;
     "debian")
-        local packages=(qemu-system-x86 libvirt-daemon-system libvirt-clients virt-manager bridge-utils ovmf swtpm wget)
-        gum spin --spinner dot --title "Installing Debian/Ubuntu packages..." -- bash -c "sudo apt update && sudo apt install -y ${packages[*]}"
+        local pkgs=(qemu-system-x86 libvirt-daemon-system libvirt-clients virt-manager bridge-utils ovmf swtpm wget)
+        gum spin --spinner line --title "Installing virt stack..." -- bash -c "sudo apt update >/dev/null 2>&1 && sudo apt install -y ${pkgs[*]} >/dev/null 2>&1"
         ;;
     esac
 }
 
 enable_services() {
-    info "Enabling libvirt services..."
-    sudo systemctl enable --now libvirtd
-    sudo virsh net-start default 2>/dev/null || true
-    sudo virsh net-autostart default 2>/dev/null || true
-    local groups=(libvirt libvirt-qemu kvm input disk)
-    for grp in "${groups[@]}"; do
-        sudo usermod -aG "$grp" "$USER" 2>/dev/null || true
-    done
+    gum spin --spinner line --title "Configuring services..." -- bash -c '
+        sudo systemctl enable --now libvirtd >/dev/null 2>&1
+        sudo virsh net-start default 2>/dev/null || true
+        sudo virsh net-autostart default 2>/dev/null || true
+        for grp in libvirt libvirt-qemu kvm input disk; do
+            sudo usermod -aG "$grp" "$USER" 2>/dev/null || true
+        done
+    '
 }
 
 setup_firewall() {
-    info "Configuring firewall rules..."
-    if command -v firewall-cmd &>/dev/null; then
-        sudo firewall-cmd --permanent --zone=libvirt --add-interface=virbr0 2>/dev/null || true
-        sudo firewall-cmd --reload 2>/dev/null
-    elif command -v ufw &>/dev/null; then
-        sudo ufw allow in on virbr0 2>/dev/null
-        sudo ufw allow out on virbr0 2>/dev/null
-    fi
+    gum spin --spinner line --title "Setting firewall rules..." -- bash -c '
+        if command -v firewall-cmd &>/dev/null; then
+            sudo firewall-cmd --permanent --zone=libvirt --add-interface=virbr0 2>/dev/null || true
+            sudo firewall-cmd --reload 2>/dev/null || true
+        elif command -v ufw &>/dev/null; then
+            sudo ufw allow in on virbr0 2>/dev/null || true
+            sudo ufw allow out on virbr0 2>/dev/null || true
+        fi
+    '
 }
 
 update_grub_iommu() {
-    local grub_config="/etc/default/grub"
-    [ ! -f "$grub_config" ] && return
-    if ! grep -E "intel_iommu=on|amd_iommu=on" "$grub_config" >/dev/null; then
-        local cpu_type=$(gum choose "Intel" "AMD" --header "Select CPU for IOMMU")
-        local param="amd_iommu=on"
-        [[ "$cpu_type" == "Intel" ]] && param="intel_iommu=on"
-        sudo sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ $param\"/" "$grub_config"
-        info "Updating GRUB configuration..."
-        case "$DISTRO" in
-        "arch") sudo grub-mkconfig -o /boot/grub/grub.cfg ;;
-        "fedora") sudo grub2-mkconfig -o /boot/grub2/grub.cfg ;;
-        "debian") command -v update-grub &>/dev/null && sudo update-grub || sudo grub-mkconfig -o /boot/grub/grub.cfg ;;
-        esac
-        log "IOMMU enabled."
+    local grub="/etc/default/grub"
+    [ ! -f "$grub" ] && return
+    if ! grep -E "intel_iommu=on|amd_iommu=on" "$grub" >/dev/null; then
+        local cpu=$(gum choose "Intel" "AMD" --height 4 --header "Select CPU for IOMMU")
+        local param=$([[ "$cpu" == "Intel" ]] && echo "intel_iommu=on" || echo "amd_iommu=on")
+        gum spin --spinner line --title "Updating GRUB..." -- bash -c "
+            sudo sed -i '/GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ $param\"/' $grub
+            if [ '$DISTRO' = 'arch' ]; then sudo grub-mkconfig -o /boot/grub/grub.cfg
+            elif [ '$DISTRO' = 'fedora' ]; then sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+            else command -v update-grub &>/dev/null && sudo update-grub || sudo grub-mkconfig -o /boot/grub/grub.cfg
+            fi
+        " >/dev/null 2>&1
+        log "IOMMU enabled"
     fi
 }
 
 declare -A OS_URLS=(
-    ["Windows 10 | Reliable and widely compatible legacy Microsoft OS"]="https://trashbytes.net/dl/4PTqqKt6mJB_wXE4cTujQS9rjIVQ3gFgH2fn9KJ8Nv7peYgPOL2wCgvB4-RFWQvBaWh113lFOpiUpHDOmMiEYJ6fqiwX48vbaSxyHQDW_widvtWxUqEvs8sOadPuPa79Q0VzPWVqYvohQQD-tCs6VBz3JZieOJ4HKTKGsbbmvCxPX2-F478osl1t_mvspZ7AXY6q7K7risgS?v=1774125334-E%2B%2BwUgVTiRw3aDfQghebvB9oTV52Wi7V%2Bcx%2FjATF%2FIo%3D"
-    ["Arch Linux | Bleeding-edge rolling release for power users"]="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
-    ["Ubuntu 24.04 | Most popular user-friendly Linux with 5-year LTS"]="https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
-    ["Fedora 41 | Innovative workstation featuring the latest GNOME desktop"]="https://download.fedoraproject.org/pub/fedora/linux/releases/41/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-41-1.4.iso"
-    ["Linux Mint 22.3 | Familiar Cinnamon desktop, perfect for Windows converts"]="https://ftp.fau.de/mint/iso/stable/22.3/linuxmint-22.3-cinnamon-64bit.iso"
-    ["Debian 12.13 | The rock-solid 'Universal OS' known for stability"]="https://ftp.thm.de/debian-cd/debian-12.13.0-amd64-DVD-1.iso"
-    ["Manjaro 26.0 | User-friendly Arch-based distro with XFCE desktop"]="https://download.manjaro.org/xfce/26.0.3/manjaro-xfce-26.0.3-260228-linux618.iso"
-    ["Kali Linux 2026.1 | Leading platform for penetration testing and security"]="https://ftp.riken.jp/Linux/kali-images/kali-weekly/kali-linux-2026-W12-installer-amd64.iso"
+    ["Windows 10 | Standard NT kernel workstation; wide legacy support for proprietary hardware/software binaries."]="https://trashbytes.net/dl/4PTqqKt6mJB_wXE4cTujQS9rjIVQ3gFgH2fn9KJ8Nv7peYgPOL2wCgvB4-RFWQvBaWh113lFOpiUpHDOmMiEYJ6fqiwX48vbaSxyHQDW_widvtWxUqEvs8sOadPuPa79Q0VzPWVqYvohQQD-tCs6VBz3JZieOJ4HKTKGsbbmvCxPX2-F478osl1t_mvspZ7AXY6q7K7risgS?v=1774125334-E%2B%2BwUgVTiRw3aDfQghebvB9oTV52Wi7V%2Bcx%2FjATF%2FIo%3D"
+    ["Arch Linux | DIY rolling-release; utilizes Pacman and Systemd; minimal base for maximum user customization."]="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
+    ["Ubuntu 24.04 | Debian-based 5-year LTS; standardized GNOME env; highly optimized for cloud and enterprise dev."]="https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
+    ["Fedora 41 | Red Hat upstream; features DNF5 and vanilla GNOME; testbed for latest Linux kernel technologies."]="https://download.fedoraproject.org/pub/fedora/linux/releases/41/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-41-1.4.iso"
+    ["Linux Mint 22.3 | Ubuntu-stable base with Cinnamon desktop; prioritizes UI familiarity for Windows migrants."]="https://ftp.fau.de/mint/iso/stable/22.3/linuxmint-22.3-cinnamon-64bit.iso"
+    ["Debian 12.13 | 'The Universal OS'; focuses on extreme stability and FOSS; utilizes the APT package manager."]="https://ftp.thm.de/debian-cd/debian-12.13.0-amd64-DVD-1.iso"
+    ["Manjaro 26.0 | User-friendly Arch derivative; hardware detection scripts and pre-configured XFCE environment."]="https://download.manjaro.org/xfce/26.0.3/manjaro-xfce-26.0.3-260228-linux618.iso"
+    ["Kali Linux 2026.1 | Specialized Debian-base for InfoSec; comes pre-loaded with hundreds of penetration tools."]="https://ftp.riken.jp/Linux/kali-images/kali-weekly/kali-linux-2026-W12-installer-amd64.iso"
 )
 VIRTIO_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win-0.1.285.iso"
 
 manage_isos() {
     local iso_dir="$HOME/Documents/Iso"
     mkdir -p "$iso_dir"
-    local SELECTED_OS=$(gum choose "${!OS_URLS[@]}" --header "Choose OS ISO")
+
+    local SELECTED_OS=$(gum choose "${!OS_URLS[@]}" --height 10 --header "Select Guest OS")
     local clean_name=$(echo "$SELECTED_OS" | cut -d'|' -f1 | xargs | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
     local os_path="$iso_dir/${clean_name}.iso"
 
     if [[ ! -f "$os_path" ]]; then
-        info "Downloading $SELECTED_OS..."
-        case "$DISTRO" in
-        "arch") wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
-        "fedora") wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
-        "debian") wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
-        esac
+        info "Fetching $clean_name ISO..."
+        fetch_iso "${OS_URLS[$SELECTED_OS]}" "$os_path"
     fi
 
-    if [[ "$SELECTED_OS" == *"Windows"* ]]; then
-        if [[ ! -f "$iso_dir/virtio-win.iso" ]]; then
-            info "Downloading VirtIO drivers for Windows..."
-
-            case "$DISTRO" in
-            "arch") wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
-            "fedora") wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
-            "debian") wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
-            esac
-        fi
+    if [[ "$SELECTED_OS" == *"Windows"* ]] && [[ ! -f "$iso_dir/virtio-win.iso" ]]; then
+        info "Fetching VirtIO drivers..."
+        fetch_iso "$VIRTIO_URL" "$iso_dir/virtio-win.iso"
     fi
 
     sudo chmod 777 "$iso_dir"/*.iso
@@ -161,49 +161,44 @@ manage_isos() {
 }
 
 deploy_vm_from_xml() {
-    if ! gum confirm "Deploy $SELECTED_OS_NAME?"; then return; fi
-    local vm_name=$(gum input --placeholder "Enter VM Name")
-    vm_name=${vm_name:-$(echo "$SELECTED_OS_NAME" | cut -d'|' -f1 | tr -d ' ' | tr '[:upper:]' '[:lower:]')}
+    gum confirm "Deploy ${SELECTED_OS_NAME% | *}?" || return
+    local default_name=$(echo "${SELECTED_OS_NAME% | *}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+    local vm_name=$(gum input --placeholder "VM Name" --value "$default_name")
     local xml_file="/tmp/${vm_name}.xml"
     local disk_path="/var/lib/libvirt/images/${vm_name}.qcow2"
 
-    info "Fetching VM preset..."
-    curl -fsSL https://raw.githubusercontent.com/OhShabuShabu/dots/refs/heads/main/vmpreset.xml -o "$xml_file"
+    gum spin --spinner line --title "Fetching XML preset..." -- curl -fsSL https://raw.githubusercontent.com/OhShabuShabu/dots/refs/heads/main/vmpreset.xml -o "$xml_file"
 
-    sed -i '/<uuid>.*<\/uuid>/d' "$xml_file"
-    sed -i "s/machine='[^']*'/machine='q35'/g" "$xml_file"
-    sed -i "s,<name>win10</name>,<name>$vm_name</name>,g" "$xml_file"
-    sed -i "s,/var/lib/libvirt/images/win10.qcow2,$disk_path,g" "$xml_file"
-    sed -i "s,/home/user/Documents/Iso/win10.iso,$SELECTED_ISO_PATH,g" "$xml_file"
-    sed -i "s,/home/user/,$HOME/,g" "$xml_file"
+    sed -i -e '/<uuid>.*<\/uuid>/d' \
+        -e "s/machine='[^']*'/machine='q35'/g" \
+        -e "s,<name>win10</name>,<name>$vm_name</name>,g" \
+        -e "s,/var/lib/libvirt/images/win10.qcow2,$disk_path,g" \
+        -e "s,/home/user/Documents/Iso/win10.iso,$SELECTED_ISO_PATH,g" \
+        -e "s,/home/user/,$HOME/,g" "$xml_file"
 
     if [[ "$SELECTED_OS_NAME" != *"Windows"* ]]; then
-        info "Non-Windows OS: Stripping VirtIO driver block from XML..."
         local match_line=$(grep -n "virtio-win.iso" "$xml_file" | cut -d: -f1 || true)
-        if [[ -n "$match_line" ]]; then
-            sed -i "$((match_line - 2)),$((match_line + 5))d" "$xml_file"
-        fi
+        [[ -n "$match_line" ]] && sed -i "$((match_line - 2)),$((match_line + 5))d" "$xml_file"
     fi
 
     if [ ! -f "$disk_path" ]; then
-        info "Creating 100G virtual disk..."
-        sudo qemu-img create -f qcow2 "$disk_path" 100G >/dev/null
+        gum spin --spinner line --title "Allocating 100G disk..." -- sudo qemu-img create -f qcow2 "$disk_path" 100G >/dev/null
         sudo chown libvirt-qemu:kvm "$disk_path" 2>/dev/null || true
     fi
 
-    if virsh define "$xml_file"; then
-        log "VM $vm_name defined successfully."
+    if virsh define "$xml_file" >/dev/null 2>&1; then
         rm -f "$xml_file"
-        if gum confirm "Start VM now?"; then
-            virsh start "$vm_name"
-            log "VM started."
+        log "VM defined"
+        if gum confirm "Start $vm_name now?"; then
+            virsh start "$vm_name" >/dev/null 2>&1
+            log "VM started"
         fi
     fi
 }
 
-install_gum
 if ! curl -fsSL "$TUI_URL" -o /tmp/tui-engine.sh; then exit 1; fi
 source /tmp/tui-engine.sh
+
 init_sudo
 check_yay
 install_required
@@ -212,4 +207,5 @@ setup_firewall
 update_grub_iommu
 manage_isos
 deploy_vm_from_xml
-log "Setup complete. Please reboot for certain changes to take effect."
+
+gum style --border normal --margin "1" --padding "1" --border-foreground 78 "Atlas Setup Complete."
