@@ -138,13 +138,13 @@ manage_isos() {
 
     if [[ ! -f "$os_path" ]]; then
         info "Downloading $SELECTED_OS..."
-        wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
+        wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
     fi
 
     if [[ "$SELECTED_OS" == *"Windows"* ]]; then
         if [[ ! -f "$iso_dir/virtio-win.iso" ]]; then
             info "Downloading VirtIO drivers for Windows..."
-            wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
+            wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
         fi
     fi
 
