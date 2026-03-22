@@ -87,7 +87,13 @@ install_required() {
     case "$DISTRO" in
     "arch")
         local pkgs=(qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt swtpm ovmf ebtables iptables-nft wget)
-        gum spin --spinner line --title "Installing virt stack (Arch)..." -- yay -S --needed --noconfirm "${pkgs[@]}"
+        gum spin --spinner line --title "Installing virt stack (Arch)..." -- bash -c '
+            for pkg in "${pkgs[@]}"; do
+                if ! yay -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
+                    error_exit "Failed to install $pkg"
+                fi
+            done
+        '
         status=$?
         ;;
     "fedora")
@@ -229,7 +235,7 @@ if ! curl -fsSL "$TUI_URL" -o /tmp/tui-engine.sh; then
 fi
 source /tmp/tui-engine.sh
 
-#init_sudo
+init_sudo
 check_yay
 install_required
 enable_services
