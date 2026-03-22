@@ -138,22 +138,22 @@ manage_isos() {
 
     if [[ ! -f "$os_path" ]]; then
         info "Downloading $SELECTED_OS..."
-        if [[ "$SELECTED_OS" == *"fedora"* ]]; then
-            wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
-        else
-            wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}"
-        fi
+        case "$DISTRO" in
+        "arch") wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
+        "fedora") wget -q --progress=bar:force -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
+        "debian") wget -q --show-progress -O "$os_path" "${OS_URLS[$SELECTED_OS]}" ;;
+        esac
     fi
 
     if [[ "$SELECTED_OS" == *"Windows"* ]]; then
         if [[ ! -f "$iso_dir/virtio-win.iso" ]]; then
             info "Downloading VirtIO drivers for Windows..."
 
-            if [[ "$SELECTED_OS" == *"fedora"* ]]; then
-                wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
-            else
-                wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL"
-            fi
+            case "$DISTRO" in
+            "arch") wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
+            "fedora") wget -q --progress=bar:force -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
+            "debian") wget -q --show-progress -O "$iso_dir/virtio-win.iso" "$VIRTIO_URL" ;;
+            esac
         fi
     fi
 
