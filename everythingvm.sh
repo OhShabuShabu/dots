@@ -219,7 +219,7 @@ fi
 source /tmp/tui-engine.sh
 
 #init_sudo
-check_yay
+
 install_required
 enable_services
 setup_firewall
