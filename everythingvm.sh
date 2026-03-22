@@ -2,7 +2,6 @@
 
 # set -e: Exit on error | -u: Exit on unset variables | -o pipefail: Catch errors in pipes
 set -euo pipefail
-set -x
 
 TUI_URL="https://raw.githubusercontent.com/OhShabuShabu/dots/heads/main/atlas/tui-engine.sh"
 
@@ -71,12 +70,24 @@ fetch_iso() {
     fi
 }
 
+check_yay() {
+    if [[ "$DISTRO" == "arch" ]] && ! command -v yay &>/dev/null; then
+        gum spin --spinner line --title "Installing yay..." -- bash -c '
+            sudo pacman -S --needed --noconfirm base-devel git >/dev/null 2>&1 || exit 1
+            tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/yay.git "$tmpdir/yay" >/dev/null 2>&1 || exit 1
+            cd "$tmpdir/yay" && makepkg -si --noconfirm >/dev/null 2>&1 || exit 1
+            rm -rf "$tmpdir"
+        ' || error_exit "Failed to install 'yay' (AUR helper)."
+    fi
+}
+
 install_required() {
     local status=0
     case "$DISTRO" in
     "arch")
         local pkgs=(qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat libvirt swtpm ovmf ebtables iptables-nft wget)
-        gum spin --spinner line --title "Installing virt stack (Arch)..." -- yay -S --needed --noconfirm "${pkgs[@]}" >/dev/null 2>&1
+        gum spin --spinner line --title "Installing virt stack (Arch)..." -- yay -S --needed --noconfirm "${pkgs[@]}"
         status=$?
         ;;
     "fedora")
@@ -219,7 +230,7 @@ fi
 source /tmp/tui-engine.sh
 
 #init_sudo
-
+check_yay
 install_required
 enable_services
 setup_firewall
