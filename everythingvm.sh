@@ -2,7 +2,7 @@
 
 # set -e: Exit on error | -u: Exit on unset variables | -o pipefail: Catch errors in pipes
 set -euo pipefail
-
+export LIBVIRT_DEFAULT_URI='qemu:///system'
 TUI_URL="https://raw.githubusercontent.com/OhShabuShabu/dots/heads/main/atlas/tui-engine.sh"
 
 # --- Error Handling Helper ---
