@@ -39,11 +39,7 @@ info() { gum style --foreground 39 "[INFO] $1"; }
 init_sudo() {
     info "Requesting sudo..."
     sudo -v
-    while true; do
-        sudo -n true
-        sleep 60
-        kill -0 "$$" || exit
-    done 2>/dev/null &
+
 }
 
 # Helper for distro-specific wget flags
