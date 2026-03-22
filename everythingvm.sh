@@ -71,18 +71,6 @@ fetch_iso() {
     fi
 }
 
-check_yay() {
-    if [[ "$DISTRO" == "arch" ]] && ! command -v yay &>/dev/null; then
-        gum spin --spinner line --title "Installing yay..." -- bash -c '
-            sudo pacman -S --needed --noconfirm base-devel git >/dev/null 2>&1 || exit 1
-            tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/yay.git "$tmpdir/yay" >/dev/null 2>&1 || exit 1
-            cd "$tmpdir/yay" && makepkg -si --noconfirm >/dev/null 2>&1 || exit 1
-            rm -rf "$tmpdir"
-        ' || error_exit "Failed to install 'yay' (AUR helper)."
-    fi
-}
-
 install_required() {
     local status=0
     case "$DISTRO" in
