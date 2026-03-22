@@ -6,12 +6,10 @@ if ! curl -fsSL "$TUI_URL" -o /tmp/tui-engine.sh; then
     echo "Error: Could not download TUI engine."
     exit 1
 fi
-source /tmp/tui-engine.sh
-
 if ! command -v gum &>/dev/null; then
     sudo pacman -S --needed --noconfirm gum
 fi
-check_deps "wget" "curl"
+source /tmp/tui-engine.sh
 
 log() { gum style --foreground 78 " [✓] $1"; }
 warn() { gum style --foreground 214 " [!] $1"; }
