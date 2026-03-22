@@ -116,7 +116,6 @@ update_grub_iommu() {
 }
 
 declare -A OS_URLS=(
-    ["Windows 11 | Latest Microsoft OS with modern UI and Snap layouts"]="https://dl.zerofs.link/dl/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJidWNrZXQiOiJhc3NldHMtYW1zIiwia2V5Ijoib05xNVlUcml4ekJlZGtoRzJxZXl2cS80M2I3YzZkMDRmY2Q0ZDNhOGJjZjQ1NTA3MTlhOTI4ZiIsImZpbGVuYW1lIjoiZW4tdXNfd2luZG93c18xMV9jb25zdW1lcl9lZGl0aW9uc192ZXJzaW9uXzI1aDJfdXBkYXRlZF9tYXJjaF8yMDI2X3g2NF9kdmRfYTFjZjZjMzYuaXNvIiwicmVnaW9uIjoiZXUiLCJlbmRwb2ludCI6InMzLmV1LWNlbnRyYWwtMDAzLmJhY2tibGF6ZWIyLmNvbSIsImV4cCI6MTc3NDE2OTUzMSwia2V5X2I2NCI6InFEaXplTUhDcUJZQ1BHT2QzdzRWV2pZSGxoVVN3V2dTN2F5K29XSEliSlU9Iiwia2V5X21kNSI6Ijc4OEk3cnc5emU0MEJzRys2QmM2Rmc9PSJ9.BeeZj3sTxQRi3qfwptimTQhQfk4D4xA6QXkcrKDtuVQ"
     ["Windows 10 | Reliable and widely compatible legacy Microsoft OS"]="https://trashbytes.net/dl/4PTqqKt6mJB_wXE4cTujQS9rjIVQ3gFgH2fn9KJ8Nv7peYgPOL2wCgvB4-RFWQvBaWh113lFOpiUpHDOmMiEYJ6fqiwX48vbaSxyHQDW_widvtWxUqEvs8sOadPuPa79Q0VzPWVqYvohQQD-tCs6VBz3JZieOJ4HKTKGsbbmvCxPX2-F478osl1t_mvspZ7AXY6q7K7risgS?v=1774125334-E%2B%2BwUgVTiRw3aDfQghebvB9oTV52Wi7V%2Bcx%2FjATF%2FIo%3D"
     ["Arch Linux | Bleeding-edge rolling release for power users"]="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
     ["Ubuntu 24.04 | Most popular user-friendly Linux with 5-year LTS"]="https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
@@ -125,7 +124,6 @@ declare -A OS_URLS=(
     ["Debian 12.13 | The rock-solid 'Universal OS' known for stability"]="https://ftp.thm.de/debian-cd/debian-12.13.0-amd64-DVD-1.iso"
     ["Manjaro 26.0 | User-friendly Arch-based distro with XFCE desktop"]="https://download.manjaro.org/xfce/26.0.3/manjaro-xfce-26.0.3-260228-linux618.iso"
     ["Kali Linux 2026.1 | Leading platform for penetration testing and security"]="https://ftp.riken.jp/Linux/kali-images/kali-weekly/kali-linux-2026-W12-installer-amd64.iso"
-    ["Pop!_OS 24.04 LTS | Optimized for STEM and gaming with the COSMIC desktop"]="https://iso.pop-os.org/24.04/amd64/intel/1/pop-os_24.04_amd64_intel_1.iso"
 )
 VIRTIO_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win-0.1.285.iso"
 
